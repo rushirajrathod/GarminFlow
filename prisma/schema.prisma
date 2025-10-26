@@ -1,0 +1,63 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Monitoring {
+  timestamp        DateTime @map("timestamp")
+  activityType     String   @map("activity_type")
+  intensity        Int?     @map("intensity")
+  duration         String   @map("duration")
+  distance         Float?   @map("distance")
+  cumulativeActive String   @map("cum_active_time")
+  activeCalories   Int?     @map("active_calories")
+  steps            Int?     @map("steps")
+  strokes          Int?     @map("strokes")
+  cycles           Float?   @map("cycles")
+
+  @@id([timestamp, activityType])
+  @@map("monitoring")
+}
+
+model MonitoringHr {
+  timestamp DateTime @id @map("timestamp")
+  heartRate Int      @map("heart_rate")
+
+  @@map("monitoring_hr")
+}
+
+model MonitoringIntensity {
+  timestamp            DateTime @id @map("timestamp")
+  moderateActivityTime String   @map("moderate_activity_time")
+  vigorousActivityTime String   @map("vigorous_activity_time")
+
+  @@map("monitoring_intensity")
+}
+
+model MonitoringClimb {
+  timestamp DateTime @id @map("timestamp")
+  ascent    Float?   @map("ascent")
+  descent   Float?   @map("descent")
+  cumAscent Float?   @map("cum_ascent")
+  cumDescent Float?  @map("cum_descent")
+
+  @@map("monitoring_climb")
+}
+
+model MonitoringPulseOx {
+  timestamp DateTime @id @map("timestamp")
+  pulseOx   Float    @map("pulse_ox")
+
+  @@map("monitoring_pulse_ox")
+}
+
+model MonitoringRr {
+  timestamp DateTime @id @map("timestamp")
+  rr        Float    @map("rr")
+
+  @@map("monitoring_rr")
+}
