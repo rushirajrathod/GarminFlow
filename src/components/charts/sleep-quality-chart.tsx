@@ -7,10 +7,10 @@ import {
   Legend,
   ResponsiveContainer,
   Tooltip,
-  TooltipProps,
   XAxis,
   YAxis,
 } from 'recharts';
+import type { TooltipProps } from 'recharts/types/component/DefaultTooltipContent';
 import { IntensityRecord } from '@/types/garmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';

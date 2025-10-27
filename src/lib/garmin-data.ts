@@ -203,7 +203,27 @@ const loadActivities = cache(async (): Promise<ActivityFile[]> => {
   }
 });
 
+const hasMonitoringTable = cache(async () => {
+  try {
+    const rows = await prisma.$queryRaw<{ name: string }[]>(Prisma.sql`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table' AND name = 'monitoring'
+      LIMIT 1
+    `);
+    return rows.length > 0;
+  } catch (error) {
+    console.warn('[garmin-data] Unable to inspect monitoring table', error);
+    return false;
+  }
+});
+
 const loadMonitoringSteps = cache(async () => {
+  const tableExists = await hasMonitoringTable();
+  if (!tableExists) {
+    return [];
+  }
+
   try {
     const rows = await prisma.$queryRaw<
       { day: string; steps: number | null }[]
@@ -327,7 +347,7 @@ export const getKeyMetrics = cache(async (): Promise<KeyMetric[]> => {
     stepsPrevious,
   );
 
-  return [
+  const metrics: KeyMetric[] = [
     {
       id: 'weekly-distance',
       label: '7-day distance',
@@ -336,14 +356,21 @@ export const getKeyMetrics = cache(async (): Promise<KeyMetric[]> => {
       trend: distanceTrend,
       helper: `Longest session ${round(longest)} km`,
     },
-    {
+  ];
+
+  const hasStepData = monitoringSteps.length > 0 && stepsCurrent > 0;
+  if (hasStepData) {
+    metrics.push({
       id: 'steps',
       label: '7-day steps',
-      value: stepsCurrent ? `${Math.round(stepsCurrent)}` : '—',
+      value: `${Math.round(stepsCurrent)}`,
       delta: `${stepsDelta} vs prev`,
       trend: stepsTrend,
-      helper: 'Steps captured by Garmin daily monitoring (if available).',
-    },
+      helper: 'Steps captured by Garmin daily monitoring.',
+    });
+  }
+
+  metrics.push(
     {
       id: 'training-load',
       label: 'Training load',
@@ -368,7 +395,9 @@ export const getKeyMetrics = cache(async (): Promise<KeyMetric[]> => {
       trend: hrTrend,
       helper: 'Average activity heart-rate (Garmin summary files).',
     },
-  ];
+  );
+
+  return metrics;
 });
 
 export const getMileageTrend = cache(async (): Promise<WeeklyMileage[]> => {

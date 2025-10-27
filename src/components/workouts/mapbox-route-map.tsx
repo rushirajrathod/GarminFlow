@@ -16,9 +16,7 @@ const TERRAIN_SOURCE_ID = 'mapbox-dem';
 const ROUTE_SOURCE_ID = 'activity-route';
 const ROUTE_LAYER_ID = 'activity-route-line';
 const BASE_SPEED_METERS_PER_SECOND = 12;
-const SPEED_OPTIONS = [0.75, 1, 1.5, 2.5, 4] as const;
-
-type SpeedOption = (typeof SPEED_OPTIONS)[number];
+const DEFAULT_SPEED_MULTIPLIER = 1;
 
 const accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 if (!accessToken) {
@@ -39,7 +37,6 @@ export default function MapboxRouteMap({
   const distanceRef = useRef(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [progressDistance, setProgressDistance] = useState(0);
-  const [speedMultiplier, setSpeedMultiplier] = useState<SpeedOption>(1);
   const [isExpanded, setIsExpanded] = useState(false);
   const cameraStateRef = useRef<{
     point: [number, number, number];
@@ -324,7 +321,7 @@ export default function MapboxRouteMap({
       lastFrameRef.current = timestamp;
 
       const { totalDistance } = pathMetrics;
-      const currentSpeed = BASE_SPEED_METERS_PER_SECOND * speedMultiplier;
+      const currentSpeed = BASE_SPEED_METERS_PER_SECOND * DEFAULT_SPEED_MULTIPLIER;
       distanceRef.current = Math.min(
         distanceRef.current + deltaSeconds * currentSpeed,
         totalDistance,
@@ -372,7 +369,7 @@ export default function MapboxRouteMap({
 
       animationRef.current = requestAnimationFrame(step);
     },
-    [getPointAlongRoute, pathMetrics, speedMultiplier, stopAnimation],
+    [getPointAlongRoute, pathMetrics, stopAnimation],
   );
 
   const startAnimation = useCallback(() => {
@@ -410,7 +407,7 @@ export default function MapboxRouteMap({
   }
 
   const hasRoute = lngLat.length > 1;
-  const baseHeightClasses = 'min-h-[360px] md:min-h-[420px] lg:min-h-[520px]';
+  const baseHeightClasses = 'min-h-[420px] md:min-h-[520px] lg:min-h-[640px] xl:min-h-[720px]';
   const mapClasses = cn(
     'relative w-full overflow-hidden bg-slate-950/10 transition-all duration-300 ease-out',
     isExpanded
@@ -483,15 +480,6 @@ export default function MapboxRouteMap({
                   <RotateCcw className="size-3.5" /> Reset
                 </button>
               </div>
-              <SpeedControls
-                speedMultiplier={speedMultiplier}
-                onChange={value => {
-                  setSpeedMultiplier(value);
-                  if (!isAnimating) {
-                    cameraStateRef.current = null;
-                  }
-                }}
-              />
               <ProgressBar
                 progress={
                   pathMetrics.totalDistance > 0
@@ -517,46 +505,6 @@ function ProgressBar({ progress }: { progress: number }) {
       />
     </div>
   );
-}
-
-function SpeedControls({
-  speedMultiplier,
-  onChange,
-}: {
-  speedMultiplier: SpeedOption;
-  onChange: (value: SpeedOption) => void;
-}) {
-  return (
-    <div className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold text-slate-600 shadow-lg backdrop-blur-xl ring-1 ring-slate-200">
-      {SPEED_OPTIONS.map(option => {
-        const active = option === speedMultiplier;
-        return (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onChange(option)}
-            className={cn(
-              'rounded-full px-2.5 py-1 transition',
-              active
-                ? 'bg-blue-600 text-white shadow'
-                : 'text-slate-500 hover:bg-blue-100',
-            )}
-          >
-            {formatSpeed(option)}x
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function formatSpeed(value: number) {
-  if (Number.isInteger(value)) {
-    return value.toFixed(0);
-  }
-  const formatted =
-    value < 1 ? value.toFixed(2) : value.toFixed(1);
-  return formatted.replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function buildRouteGeoJSON(coordinates: [number, number, number][]) {

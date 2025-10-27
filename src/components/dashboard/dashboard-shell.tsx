@@ -2,15 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Activity,
-  BarChart3,
-  Bot,
-  Cog,
-  LineChart,
-  Menu,
-  Navigation,
-} from 'lucide-react';
+import { Activity, BarChart3, Bot, Cog, Menu, Navigation } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -42,12 +34,6 @@ const navItems: NavItem[] = [
     description: 'Detailed log with splits, effort, and notes.',
     href: '/workouts',
     icon: Activity,
-  },
-  {
-    title: 'Analytics',
-    description: 'Deep dives into trends and correlations.',
-    href: '/analytics',
-    icon: LineChart,
   },
   {
     title: 'AI Coach',
@@ -142,7 +128,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           {!isCollapsed && (
-            <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-sidebar-border bg-sidebar p-4 shadow-sm">
+                <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-sidebar-border bg-sidebar p-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-sidebar-primary/10 text-sidebar-primary">
                   <Cog className="size-4" />
@@ -156,8 +142,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
               </div>
-              <Button className="mt-4 w-full" asChild>
-                <Link href="/analytics">View the latest</Link>
+              <Button className="mt-4 w-full" variant="outline">
+                Coming soon
               </Button>
             </div>
           )}

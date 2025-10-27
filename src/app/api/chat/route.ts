@@ -27,13 +27,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Message is required.' }, { status: 400 });
   }
 
-  const context = buildContextSummary();
+  const context = await buildContextSummary();
 
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
-    return NextResponse.json({
-      reply: fallbackReply(context, userMessage),
+    return new NextResponse(fallbackReply(context, userMessage), {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   }
 
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         temperature: 0.4,
+        stream: true,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -57,36 +58,83 @@ export async function POST(request: Request) {
       }),
     });
 
-    if (!response.ok) {
+    if (!response.ok || !response.body) {
       const errorText = await response.text();
       console.error('[chat] OpenAI error', errorText);
-      return NextResponse.json(
-        {
-          reply: fallbackReply(context, userMessage),
-        },
-        { status: 200 },
-      );
+      return new NextResponse(fallbackReply(context, userMessage), {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
     }
 
-    const data = await response.json();
-    const reply: string | undefined = data.choices?.[0]?.message?.content;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
-    return NextResponse.json({
-      reply: reply ?? fallbackReply(context, userMessage),
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const reader = response.body!.getReader();
+        let buffer = '';
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed.startsWith(':')) continue;
+              if (trimmed === 'data: [DONE]') {
+                controller.close();
+                return;
+              }
+              if (!trimmed.startsWith('data:')) continue;
+              try {
+                const json = JSON.parse(trimmed.slice(5));
+                const content = json.choices?.[0]?.delta?.content;
+                if (content) {
+                  controller.enqueue(encoder.encode(content));
+                }
+              } catch (error) {
+                console.error('[chat] stream parse error', error);
+              }
+            }
+          }
+
+          if (buffer) {
+            controller.enqueue(encoder.encode(buffer));
+          }
+          controller.close();
+        } catch (error) {
+          console.error('[chat] stream failure', error);
+          controller.enqueue(
+            encoder.encode(fallbackReply(context, userMessage)),
+          );
+          controller.close();
+        } finally {
+          reader.releaseLock();
+        }
+      },
+    });
+
+    return new NextResponse(stream, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   } catch (error) {
     console.error('[chat] request failed', error);
-    return NextResponse.json({
-      reply: fallbackReply(context, userMessage),
+    return new NextResponse(fallbackReply(context, userMessage), {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   }
 }
 
-function buildContextSummary() {
-  const metrics = getKeyMetrics();
-  const workouts = getRecentWorkouts(3);
-  const focus = getTrainingFocus();
-  const race = getNextRacePlan();
+async function buildContextSummary() {
+  const [metrics, workouts, focus, race] = await Promise.all([
+    getKeyMetrics(),
+    getRecentWorkouts(3),
+    getTrainingFocus(),
+    getNextRacePlan(),
+  ]);
 
   const metricsText = metrics
     .map(

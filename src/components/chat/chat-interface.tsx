@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, SendHorizonal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  streaming?: boolean;
 };
 
 export type ChatContext = {
@@ -20,16 +22,15 @@ export type ChatContext = {
 
 type ChatInterfaceProps = {
   context: ChatContext;
-  presets?: string[];
   endpoint?: string;
 };
 
-export function ChatInterface({ context, presets, endpoint = '/api/chat' }: ChatInterfaceProps) {
+export function ChatInterface({ context, endpoint = '/api/chat' }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: 'm-0',
       role: 'assistant',
-      content: `Hey! I'm your Garmin AI coach. You're carrying a readiness score of ${context.readinessScore} with ${context.weeklyDistance} logged this week. Ask anything — pacing, fatigue, or how to sharpen for ${context.nextRace}.`,
+      content: `Hey! I'm your Garmin AI coach. You're carrying a readiness score of ${context.readinessScore} with ${context.weeklyDistance} logged this week. Ask anything — pacing, fatigue, or how to sharpen for next race.`,
       createdAt: new Date().toISOString(),
     },
   ]);
@@ -44,16 +45,26 @@ export function ChatInterface({ context, presets, endpoint = '/api/chat' }: Chat
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!input.trim() || isThinking) return;
+    const prompt = input.trim();
+    if (!prompt || isThinking) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: input.trim(),
+      content: prompt,
       createdAt: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const assistantId = crypto.randomUUID();
+    const assistantMessage: Message = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      createdAt: new Date().toISOString(),
+      streaming: true,
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
     setInput('');
     setIsThinking(true);
 
@@ -61,89 +72,91 @@ export function ChatInterface({ context, presets, endpoint = '/api/chat' }: Chat
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage.content }),
+        body: JSON.stringify({ message: prompt }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         throw new Error('Unable to reach AI service');
       }
 
-      const data: { reply?: string } = await response.json();
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content:
-          data.reply ?? buildPlaceholderReply(userMessage.content, context),
-        createdAt: new Date().toISOString(),
-      };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch {
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `${buildPlaceholderReply(userMessage.content, context)}\n\n(Enable OPENAI_API_KEY to receive live answers.)`,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (chunk) {
+          setMessages(prev =>
+            prev.map(message =>
+              message.id === assistantId
+                ? { ...message, content: message.content + chunk }
+                : message,
+            ),
+          );
+        }
+      }
+
+      const remainder = decoder.decode();
+      if (remainder) {
+        setMessages(prev =>
+          prev.map(message =>
+            message.id === assistantId
+              ? { ...message, content: message.content + remainder }
+              : message,
+          ),
+        );
+      }
+
+      setMessages(prev =>
+        prev.map(message =>
+          message.id === assistantId ? { ...message, streaming: false } : message,
+        ),
+      );
+      reader.releaseLock();
+    } catch (error) {
+      console.error('[chat] assistant request failed', error);
+      const fallback = `${buildPlaceholderReply(prompt, context)}\n\n(Enable OPENAI_API_KEY to receive live answers.)`;
+      setMessages(prev =>
+        prev.map(message =>
+          message.id === assistantId
+            ? { ...message, content: fallback, streaming: false }
+            : message,
+        ),
+      );
     } finally {
       setIsThinking(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
       <div
         ref={containerRef}
-        className="h-[420px] overflow-y-auto rounded-2xl border border-border/60 bg-card p-4"
+        className="h-[480px] overflow-y-auto rounded-xl border border-border/50 bg-background p-5"
       >
         <div className="space-y-3">
           {messages.map(message => (
             <MessageBubble key={message.id} message={message} />
           ))}
-          {isThinking && (
-            <div className="ml-auto flex w-fit items-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" />
-              Thinking…
-            </div>
-          )}
         </div>
       </div>
 
-      {presets?.length ? (
-        <div className="grid gap-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Prompt presets
-          </span>
-          <div className="grid gap-2 md:grid-cols-3">
-            {presets.map(prompt => (
-              <Button
-                key={prompt}
-                type="button"
-                variant="outline"
-                className="justify-start text-left"
-                onClick={() => setInput(prompt)}
-              >
-                {prompt}
-              </Button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-end gap-3 rounded-xl border border-border/60 bg-background p-4"
+      >
         <Textarea
           value={input}
           onChange={event => setInput(event.target.value)}
-          placeholder="Ask something like “How should I taper before race day?”"
+          placeholder="Ask your coach…"
+          className="flex-1 resize-none border-none p-0 shadow-none focus-visible:ring-0"
           rows={3}
         />
-        <div className="flex items-center justify-end gap-2">
-          <Button type="submit" disabled={!input.trim() || isThinking}>
-            <SendHorizonal className="mr-2 size-4" />
-            Send
-          </Button>
-        </div>
+        <Button type="submit" disabled={!input.trim() || isThinking}>
+          <SendHorizonal className="mr-2 size-4" />
+          Send
+        </Button>
       </form>
     </div>
   );
@@ -152,15 +165,32 @@ export function ChatInterface({ context, presets, endpoint = '/api/chat' }: Chat
 function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === 'user';
 
+  if (message.streaming && !message.content.trim()) {
+    return (
+      <div className="ml-auto flex w-fit items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground shadow-sm">
+        <Loader2 className="size-3 animate-spin" />
+        Preparing response…
+      </div>
+    );
+  }
+
+  const baseClasses =
+    'max-w-[78%] rounded-lg px-4 py-2 text-sm leading-relaxed shadow-sm whitespace-pre-wrap';
+
+  const formatted = message.content
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\n- /g, '\n• ')
+    .replace(/#{1,6}\s*/g, '')
+    .trim();
+
   return (
     <div
-      className={
-        isUser
-          ? 'ml-auto max-w-[80%] rounded-2xl border border-border bg-primary text-primary-foreground px-4 py-2 text-sm shadow-sm'
-          : 'max-w-[80%] rounded-2xl border border-border/70 bg-muted/40 px-4 py-2 text-sm text-foreground'
-      }
+      className={cn(
+        baseClasses,
+        isUser ? 'ml-auto bg-primary text-primary-foreground' : 'border border-border/60 bg-background text-foreground',
+      )}
     >
-      <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+      {formatted}
     </div>
   );
 }
