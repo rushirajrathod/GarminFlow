@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Garmin Coach',
+  title: 'Garmin Flow',
   description:
     'Beautiful dashboards, insights, and AI coaching powered by your Garmin data.',
 };

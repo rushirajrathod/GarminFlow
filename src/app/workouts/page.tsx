@@ -22,7 +22,7 @@ export default async function WorkoutsPage() {
           className="w-full max-w-xs"
         />
         <Button variant="outline">Filters</Button>
-        <Button variant="outline">Export</Button>
+        {/* <Button variant="outline">Export</Button> */}
       </div>
 
       <section className="grid gap-4 lg:grid-cols-4">

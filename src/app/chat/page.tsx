@@ -40,15 +40,9 @@ export default async function ChatPage() {
         <CardHeader className="space-y-3">
           <CardTitle className="text-2xl font-semibold">AI Coach</CardTitle>
           <CardDescription className="text-sm leading-relaxed">
-            Ask about pacing, recovery, or training strategy. Readiness {readinessScore} · Weekly
-            distance {chatContext.weeklyDistance}{' '}
-            {raceDate
-              ? `· ${racePlan.name} on ${raceDate.toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}`
-              : `· ${racePlan.name}`}
+            Ask about pacing, recovery, or training strategy. Readiness · Weekly
+            distance {' '}
+            
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">

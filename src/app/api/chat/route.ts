@@ -6,7 +6,7 @@ import {
   getTrainingFocus,
 } from '@/lib/garmin-data';
 
-const SYSTEM_PROMPT = `You are Garmin Coach AI, an expert endurance coach who personalises guidance using Garmin Connect metrics. Use the provided context only. Where useful, tie insights to readiness, training load, time-in-zone, and sleep.`;
+const SYSTEM_PROMPT = `You are Garmin Flow AI, an expert endurance coach who personalises guidance using Garmin Connect metrics. Use the provided context only. Where useful, tie insights to readiness, training load, time-in-zone, and sleep.`;
 
 type ChatRequestBody = {
   message?: string;

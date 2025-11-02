@@ -66,10 +66,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {!isCollapsed && (
               <div>
                 <p className="text-sm font-semibold tracking-tight text-sidebar-foreground">
-                  Garmin Coach
+                  Garmin Flow
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Performance cockpit
+                  Performance dashboards
                 </p>
               </div>
             )}
@@ -127,26 +127,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {!isCollapsed && (
-                <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-sidebar-border bg-sidebar p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full bg-sidebar-primary/10 text-sidebar-primary">
-                  <Cog className="size-4" />
-                </div>
-                <div className="flex-1 text-sm">
-                  <p className="font-semibold text-sidebar-foreground">
-                    Weekly review
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Summaries land in your inbox every Monday.
-                  </p>
-                </div>
-              </div>
-              <Button className="mt-4 w-full" variant="outline">
-                Coming soon
-              </Button>
-            </div>
-          )}
+          
         </aside>
 
         <div className="flex flex-1 flex-col">
@@ -170,7 +151,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
               <div className="hidden flex-col md:flex">
                 <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  {activeItem?.title ?? 'Garmin Coach'}
+                  {activeItem?.title ?? 'Garmin Flow'}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {activeItem?.description ??
@@ -183,10 +164,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Button variant="outline" size="sm" className="hidden md:flex">
                   Export data
                 </Button>
-                <div className="hidden items-center gap-2 rounded-xl border border-border px-3 py-1 text-xs font-medium md:flex">
-                  <span className="size-2 rounded-full bg-emerald-500" />
-                  Synced 2h ago
-                </div>
+                
               </div>
             </div>
           </header>
