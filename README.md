@@ -4,7 +4,7 @@ https://github.com/user-attachments/assets/b73d16a9-ed7c-425c-a55c-994bfcafaea6
 
 
 
-Garmin Flow is a personal training dashboard built with Next.js 16 and React 19. I originally put it together for my own use during the Garmin vs. Strava lawsuit so I could stay in control of my data. It aggregates Garmin Connect activity, readiness, sleep, and training load data into a single view, adds map visualisations with Mapbox GL, and offers an optional coaching chat experience. I still rely on it day to day to stay on top of endurance and fitness goals—morning coffee in hand, dashboard open, ready to see what the next workout brings. 😊
+Garmin Flow is a personal training dashboard built with Next.js 16 and React 19. I originally put it together for my own use during the Garmin vs. Strava lawsuit so I could stay in control of my data. It aggregates Garmin Connect activity, readiness, sleep, and training load data into a single view, adds map visualisations with Mapbox GL, and offers an optional coaching chat experience. I still rely on it day to day to stay on top of endurance and fitness goals 🙂
 
 ## Why GarminDB?
 
